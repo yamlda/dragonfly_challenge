@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dragonfly AI Risk Prototype</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Noto+Sans+Thai:wght@100..900&display=swap');
+        body {
+            font-family: 'Noto Sans Thai', 'Inter', sans-serif;
+            background-color: #F7F7F7; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 10vh; /* Changed min-height to 10vh to stop it from taking up the entire screen, as per chat history */
+            margin: 0;
+            padding: 20px;
+        }
+        /* Mobile Frame Styling */
+        .mobile-frame {
+            width: 100%;
+            max-width: 400px;
+            height: 800px;
+            background-color: white;
+            /* Added a slightly larger radius for a more phone-like shape */
+            border-radius: 40px; 
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); 
+            overflow: hidden;
+            position: relative;
+        }
+        /* Header Gradient matching the original app */
+        .header-gradient {
+            background: linear-gradient(to bottom right, #4CAF50, #8BC34A); 
+        }
+        /* Custom Card Shadow for features/dashboard items */
+        .feature-card-shadow {
+             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08); 
+        }
+        /* Custom Icon Styling: Light Green Circle, Dark Green Outline Icon */
+        .green-icon-bg {
+            background-color: #E8F5E9; 
+            color: #388E3C; 
+        }
+        /* Custom Icon Styling for AI: Light Blue Circle, Dark Blue Outline Icon */
+        .blue-icon-bg {
+            background-color: #E3F2FD; 
+            color: #1976D2; 
+        }
+        /* Utility class to control screen visibility */
+        .screen-hidden {
+            display: none;
+        }
+        /* Progress Bar Base Style */
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            background-color: #E0E0E0; /* Light gray track */
+        }
+        /* Progress Bar Fill Style (Transition for visual effect) */
+        .progress-fill {
+            height: 100%;
+            transition: width 0.5s ease-in-out;
+        }
+       
+        /* --- NEW STYLES FOR NOTIFICATION SCREEN (iOS Look) --- */
+        .home-screen-bg {
+            /* Simulates a dark, busy background for a lock/home screen */
+            background-color: #333333; 
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding-top: 50px; /* Increased padding top for better alignment */
+        }
+
+        /* Notification Pop-up Styling - iOS Style */
+        .notification-card {
+            width: 90%;
+            max-width: 380px;
+            /* iOS-like slightly translucent white/light gray */
+            background-color: rgba(240, 240, 240, 0.9); 
+            border-radius: 14px;
+            padding: 12px;
+            /* Softer, more visible shadow for depth */
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); 
+            cursor: pointer; 
+            animation: slideDown 0.5s ease-out;
+            z-index: 20; 
+            backdrop-filter: blur(8px); /* Add blur effect (iOS style) */
+        }
+       
+        /* New: Home Indicator Style (iPhone bar at the bottom) */
+        .home-indicator {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 130px; 
+            height: 5px;
+            background-color: white;
+            border-radius: 10px;
+            z-index: 50; 
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="mobile-frame">
+   
+    <!-- NEW Screen 0: Notification Screen (Simulated Home/Lock Screen) -->
+    <div id="screen-notification" class="home-screen-bg">
+       
+        <!-- Placeholder for Status Bar (Time/Battery) - Simplified iOS-like Status Bar -->
+        <div class="w-full text-white px-6 mt-2 flex justify-between text-base font-bold z-30">
+            <!-- Time: Bold, Left Aligned (Standard iOS time font weight) -->
+            <span id="status-bar-time" class="text-lg">04:23</span>
+           
+            <!-- Icons on the right -->
+            <div class="flex items-center space-x-1 text-sm font-semibold">
+                <!-- Battery Icon Placeholder (Using a simple path for iOS look) -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="1" y="6" width="18" height="12" rx="3" ry="3"></rect>
+                    <line x1="22" y1="11" x2="22" y2="13"></line>
+                    <!-- Battery fill for 85% -->
+                    <rect x="2" y="7" width="15.3" height="10" rx="2" ry="2" fill="currentColor" class="text-white"></rect>
+                </svg>
+            </div>
+        </div>
+       
+        <!-- Large Clock/Date Placeholder (Typical iOS Lock Screen) -->
+        <div class="mt-4 mb-20 text-center text-white z-30">
+            <h1 id="main-clock-time" class="text-6xl font-extrabold">04:23</h1>
+            <p id="main-clock-date" class="text-lg font-medium">วันอาทิตย์, 5 ตุลาคม</p>
+        </div>
+
+
+        <!-- High Risk Notification Pop-up -->
+        <div id="notification-card" class="notification-card" onclick="openDashboardFromNotification()">
+            <div class="flex items-start space-x-3">
+                <!-- App Icon Placeholder (Red Bug Icon) -->
+                <div class="flex-shrink-0 pt-1">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-red-600">
+                        <!-- Simplified Bug Icon -->
+                        <path d="M12 18c-2.761 0-5-3.358-5-7.5S9.239 3 12 3s5 3.358 5 7.5S14.761 18 12 18z" />
+                        <path d="M7 11h-3M20 11h-3M6 15l-3 3M21 18l-3-3M6 7l-3-3M21 4l-3 3" />
+                        <path d="M12 3v-2M15 3.5l2-2.5M9 3.5l-2-2.5" />
+                    </svg>
+                </div>
+               
+                <!-- Notification Content -->
+                <div class="flex-grow">
+                    <div class="flex justify-between items-center">
+                        <!-- App Name/Title -->
+                        <p class="text-sm font-bold text-gray-800">Dragonfly</p>
+                        <!-- Timestamp -->
+                        <p class="text-xs text-gray-500">ตอนนี้</p>
+                    </div>
+                    <!-- Notification Body (High Risk Warning) -->
+                    <p class="mt-1 text-base font-bold text-red-700">
+                        ความเสี่ยงในการเกิดโรคเชื้อรา
+                    </p>
+                    <p class="text-sm text-red-500">
+                        เสี่ยงสูง! โปรดระวังอย่างรุนแรง!!
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Placeholder for other notifications or widgets to make it look less empty -->
+        <div class="w-full px-5 mt-4 space-y-3">
+             <div class="h-10 bg-white/20 rounded-xl backdrop-blur-sm"></div>
+             <div class="h-10 bg-white/20 rounded-xl backdrop-blur-sm"></div>
+        </div>
+       
+        <!-- App Icons (Simulated Home Screen Dock) -->
+        <div class="absolute bottom-16 w-full px-8 flex justify-evenly z-30">
+            <!-- Dragonfly Icon (Current App) -->
+            <div class="flex flex-col items-center">
+                <div class="p-3 bg-green-500 rounded-2xl shadow-lg w-14 h-14 flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 text-white">
+                        <path d="M12 18c-2.761 0-5-3.358-5-7.5S9.239 3 12 3s5 3.358 5 7.5S14.761 18 12 18z" /><path d="M7 11h-3M20 11h-3M6 15l-3 3M21 18l-3-3M6 7l-3-3M21 4l-3 3" /><path d="M12 3v-2M15 3.5l2-2.5M9 3.5l-2-2.5" />
+                    </svg>
+                </div>
+                <!-- <span class="text-xs text-white mt-1">Dragonfly</span> --> <!-- Dock icons usually don't have text -->
+            </div>
+           
+            <!-- Other Placeholder App Icons -->
+            <div class="flex flex-col items-center">
+                <div class="p-3 bg-blue-500 rounded-2xl shadow-lg w-14 h-14 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                </div>
+            </div>
+            <div class="flex flex-col items-center">
+                <div class="p-3 bg-red-500 rounded-2xl shadow-lg w-14 h-14 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </div>
+            </div>
+             <div class="flex flex-col items-center">
+                <div class="p-3 bg-yellow-500 rounded-2xl shadow-lg w-14 h-14 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8l8 5 8-5v10z"/></svg>
+                </div>
+            </div>
+        </div>
+
+       
+        <!-- Dismiss button/Area: Click on the screen background to dismiss and go to the list -->
+        <div onclick="showListFromNotification()" class="absolute inset-0 z-10 pt-24 cursor-pointer">
+            <!-- Removed the 'Tap to enter' text as it interferes with the Home Indicator look -->
+        </div>
+       
+    </div>
+   
+    <!-- Screen 1: โรคและแมลง (Feature List) - HIDDEN initially -->
+    <div id="screen-list" class="screen-hidden absolute inset-0 bg-white z-40">
+        <!-- Header: โรคและแมลง -->
+        <header class="header-gradient p-4 flex items-center shadow-lg">
+            <svg onclick="history.back()" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            <h1 class="text-xl font-bold text-white flex-grow text-center pr-10">โรคและแมลง</h1>
+        </header>
+
+        <!-- Main Content -->
+        <div class="p-4 space-y-4 overflow-y-auto h-[736px] bg-[#F7F7F7]">
+           
+            <!-- Existing Feature 1: แจ้งเตือนโรคและแมลง -->
+            <div class="bg-white rounded-xl feature-card-shadow p-4 flex items-center cursor-pointer hover:bg-gray-50 transition duration-150">
+                <!-- Icon Group -->
+                <div class="p-3 rounded-full green-icon-bg relative">
+                    <!-- Custom Stylized Bug/Pest Outline Icon (Base) -->
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7">
+                        <path d="M12 18c-2.761 0-5-3.358-5-7.5S9.239 3 12 3s5 3.358 5 7.5S14.761 18 12 18z" /><path d="M7 11h-3M20 11h-3M6 15l-3 3M21 18l-3-3M6 7l-3-3M21 4l-3 3" /><path d="M12 3v-2M15 3.5l2-2.5M9 3.5l-2-2.5" />
+                    </svg>
+                </div>
+                <!-- Title -->
+                <p class="ml-5 font-semibold text-gray-800 text-lg">แจ้งเตือนโรคและแมลง</p>
+            </div>
+
+            <!-- Existing Feature 2: แผนที่โรคและแมลง -->
+            <div class="bg-white rounded-xl feature-card-shadow p-4 flex items-center cursor-pointer hover:bg-gray-50 transition duration-150">
+                <!-- Icon Group -->
+                <div class="p-3 rounded-full green-icon-bg relative">
+                    <!-- Custom Stylized Bug/Pest Outline Icon (Base) -->
+                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7">
+                         <path d="M12 18c-2.761 0-5-3.358-5-7.5S9.239 3 12 3s5 3.358 5 7.5S14.761 18 12 18z" /><path d="M7 11h-3M20 11h-3M6 15l-3 3M21 18l-3-3M6 7l-3-3M21 4l-3 3" /><path d="M12 3v-2M15 3.5l2-2.5M9 3.5l-2-2.5" />
+                    </svg>
+                    <!-- Overlay Icon: Map/Flag -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 absolute top-0 right-0 text-green-700/80">
+                        <path fill="none" d="M0 0h24v24H0z"/>
+                        <path d="M12 2C9.24 2 7 4.24 7 7c0 4.25 5 9 5 9s5-4.75 5-9c0-2.76-2.24-5-5-5zm0 8c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+                    </svg>
+                </div>
+                <!-- Title -->
+                <p class="ml-5 font-semibold text-gray-800 text-lg">แผนที่โรคและแมลง</p>
+            </div>
+
+            <!-- NEW FEATURE: AI Risk Analysis (Blue Ring Emphasis) -->
+            <div id="new-feature-card" onclick="showDashboard()" class="bg-white rounded-xl p-4 flex items-center cursor-pointer ring-4 ring-blue-600 feature-card-shadow hover:bg-blue-50 transition duration-300">
+                <!-- Icon Group -->
+                <div class="p-3 rounded-full green-icon-bg relative">
+                    <!-- Base Icon: Bug/Pest -->
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7">
+                        <path d="M12 18c-2.761 0-5-3.358-5-7.5S9.239 3 12 3s5 3.358 5 7.5S14.761 18 12 18z" /><path d="M7 11h-3M20 11h-3M6 15l-3 3M21 18l-3-3M6 7l-3-3M21 4l-3 3" /><path d="M12 3v-2M15 3.5l2-2.5M9 3.5l-2-2.5" />
+                    </svg>
+                    <!-- Overlay Icon: Warning Sign (Exclamation mark on top right of the bug) -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF0000" class="w-4 h-4 absolute -top-1 -right-1 text-red-500">
+                        <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 16a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm0-8a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0V9a1 1 0 0 1 1-1z" fill="#D32F2F"/>
+                        <path fill="#FFFFFF" d="M12.5 15h-1V9h2V15zM12 17.5a.5.5 0 1 0 0 1 .5.5 0 0 0 0-1z"/>
+                    </svg>
+                </div>
+                <!-- Title (Bold and Blue for emphasis) -->
+                <p class="ml-5 font-black text-green-800 text-lg">เฝ้าระวังความเสี่ยงโรคและแมลง</p>
+            </div>
+           
+        </div>
+    </div>
+
+    <!-- Screen 2: Risk Dashboard (เฝ้าระวังความเสี่ยงโรคและแมลง) - HIDDEN initially -->
+    <div id="screen-dashboard" class="screen-hidden absolute inset-0 bg-white z-40">
+       
+        <!-- Header: เฝ้าระวังความเสี่ยงโรคและแมลง -->
+        <header class="header-gradient p-4 flex items-center shadow-lg">
+            <svg onclick="showList()" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            <h1 class="text-xl font-bold text-white flex-grow text-center pr-10">เฝ้าระวังความเสี่ยงโรคและแมลง</h1>
+        </header>
+
+        <!-- Main Content: Dashboard -->
+        <div class="p-4 space-y-4 overflow-y-auto h-[736px] bg-[#F7F7F7]">
+           
+            <!-- Map Card based on user's React code -->
+            <div class="relative w-full h-64 bg-gray-200 rounded-xl feature-card-shadow overflow-hidden">
+                <!-- Simulated satellite map view -->
+                <div class="absolute inset-0 bg-gradient-to-br from-yellow-100 via-green-100 to-amber-100 opacity-70"></div>
+                
+                <!-- Highlighted plot area -->
+                <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <path d="M 30 20 L 60 25 L 70 40 L 65 70 L 35 75 L 25 45 Z" fill="rgba(34, 197, 94, 0.5)" stroke="white" stroke-width="0.5"></path>
+                </svg>
+
+                <!-- Orange road line -->
+                <div class="absolute right-8 top-0 bottom-0 w-1 bg-orange-500"></div>
+
+                <!-- Small buildings/structures -->
+                <div class="absolute top-4 left-8 w-4 h-4 bg-gray-400"></div>
+                <div class="absolute top-8 left-16 w-3 h-3 bg-gray-400"></div>
+                <div class="absolute bottom-16 right-16 w-5 h-5 bg-white border border-gray-300"></div>
+            </div>
+
+            <!-- Trigger Point Legend -->
+            <div class="bg-white rounded-xl feature-card-shadow p-4 space-y-3">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-gray-700">ระดับความเสี่ยง</h2>
+                    <!-- Bell Icon Container -->
+                    <div onclick="toggleNotification()" class="h-7 w-7 cursor-pointer relative">
+                        <!-- Bell Off State (Gray, solid) -->
+                        <svg id="bell-off" class="h-full w-full text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19.25 14.05C18.3 12.53 17 10.27 17 7.5C17 4.46 14.54 2 11.5 2C8.46 2 6 4.46 6 7.5C6 10.27 4.7 12.53 3.75 14.05C3.33 14.71 3.44 15.63 4 16.26C4.56 16.89 5.43 17.25 6.33 17.25H16.67C17.57 17.25 18.44 16.89 19 16.26C19.56 15.63 19.67 14.71 19.25 14.05ZM11.5 22C12.6 22 13.5 21.1 13.5 20H9.5C9.5 21.1 10.4 22 11.5 22Z"/>
+                        </svg>
+                        <!-- Bell On State (Ringing, Yellow, solid) - Hidden by default -->
+                        <svg id="bell-on" class="h-full w-full text-yellow-500 hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                             <path d="M19.25 14.05C18.3 12.53 17 10.27 17 7.5C17 4.46 14.54 2 11.5 2C8.46 2 6 4.46 6 7.5C6 10.27 4.7 12.53 3.75 14.05C3.33 14.71 3.44 15.63 4 16.26C4.56 16.89 5.43 17.25 6.33 17.25H16.67C17.57 17.25 18.44 16.89 19 16.26C19.56 15.63 19.67 14.71 19.25 14.05ZM11.5 22C12.6 22 13.5 21.1 13.5 20H9.5C9.5 21.1 10.4 22 11.5 22Z"/>
+                             <!-- Ringing arcs - Made more concave to follow the bell's contour -->
+                             <path d="M5 3 C 1 5, 1 7, 5 9 M19 3 C 23 5, 23 7, 19 9" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center text-sm font-medium">
+                    <div class="flex items-center space-x-1">
+                        <span class="w-3 h-3 rounded-full bg-red-600"></span>
+                        <span class="text-red-600">เสี่ยงสูง</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <span class="w-3 h-3 rounded-full bg-orange-500"></span>
+                        <span class="text-orange-500">เสี่ยงกลาง</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+                        <span class="text-yellow-400">เสี่ยงต่ำ</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                        <span class="text-green-500">ไม่มีความเสี่ยง</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Summary Card (ความเสี่ยงในการเกิดโรคเชื้อรา) -->
+            <div class="bg-white rounded-xl feature-card-shadow p-4 flex items-center">
+                <!-- Icon Group (Big Bug Icon - Red for High Risk) -->
+                <div class="p-4 rounded-full bg-red-100 text-red-700">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-10 h-10">
+                        <!-- Simplified Bug Icon -->
+                        <path d="M12 18c-2.761 0-5-3.358-5-7.5S9.239 3 12 3s5 3.358 5 7.5S14.761 18 12 18z" />
+                        <path d="M7 11h-3M20 11h-3M6 15l-3 3M21 18l-3-3M6 7l-3-3M21 4l-3 3" />
+                        <path d="M12 3v-2M15 3.5l2-2.5M9 3.5l-2-2.5" />
+                    </svg>
+                </div>
+               
+                <!-- Risk Status -->
+                <div class="ml-5">
+                    <h2 class="text-lg font-bold text-gray-700">ความเสี่ยงในการเกิดโรคเชื้อรา</h2>
+                    <p class="text-base font-semibold text-red-700">
+                        อยู่ในระดับเสี่ยงสูง โปรดดำเนินการแก้ไข!
+                    </p>
+                    <p id="dashboard-date" class="text-xs text-gray-500 mt-1">
+                        (ข้อมูล ณ วันที่ 5 ตุลาคม 2568)
+                    </p>
+                </div>
+            </div>
+
+            <!-- MOVED: Recommendation Card -->
+            <div class="bg-yellow-50 border border-yellow-200 rounded-xl feature-card-shadow p-3 flex items-start space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                <div>
+                    <h4 class="text-sm font-bold text-yellow-800">คำแนะนำสำหรับความเสี่ยงสูง</h4>
+                    <p class="text-sm text-yellow-700 mt-1">ตรวจพบความเสี่ยงสูงต่อโรคเชื้อรา ควรเตรียมฉีดพ่นสารชีวภัณฑ์ เช่น ไตรโคเดอร์มา หรือ บีเอส เพื่อป้องกันและควบคุมการระบาด</p>
+                </div>
+            </div>
+            
+
+            <!-- Combined Factor Analysis Section: Sorted by Risk Percentage (Highest Risk First) -->
+            <div class="bg-white rounded-xl feature-card-shadow p-4 space-y-5">
+                <h2 class="text-lg font-bold text-gray-700">ปัจจัย</h2>
+               
+                <!-- Helper function for progress bar to determine color class based on percentage -->
+                <script>
+                    function getProgressColor(percent) {
+                        if (percent >= 60) return 'bg-red-600';
+                        if (percent >= 30) return 'bg-orange-500';
+                        if (percent >= 10) return 'bg-yellow-400';
+                        return 'bg-green-500';
+                    }
+                </script>
+
+                <!-- NEW Factor 1: Temperature Fluctuation (High Risk - 70%) -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-base text-gray-800">อุณหภูมิเฉลี่ยรายวัน</span>
+                        <span class="text-sm font-semibold text-red-600">มีอุณหภูมิเฉลี่ย 35 องศา (70%)</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill bg-red-600" style="width: 70%;"></div>
+                    </div>
+                    <p class="text-xs text-red-600 mt-1">เสี่ยงสูง</p>
+                </div>
+
+                <!-- NEW Factor 2: Soil pH Level (Medium Risk - 55%) -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-base text-gray-800">ค่าความเป็นกรด-ด่างในดิน</span>
+                        <span class="text-sm font-semibold text-orange-600">ค่า pH 5.5 (55%)</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill bg-orange-500" style="width: 55%;"></div>
+                    </div>
+                    <p class="text-xs text-orange-600 mt-1">เสี่ยงกลาง</p>
+                </div>
+
+                <!-- Original Factor 1: Soil Moisture (Medium Risk - 40%) -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-base text-gray-800">ความชื้นในดิน</span>
+                        <span class="text-sm font-semibold text-orange-600">ระดับความชื้นในดิน (40%)</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill bg-orange-500" style="width: 40%;"></div>
+                    </div>
+                    <p class="text-xs text-orange-600 mt-1">เสี่ยงกลาง</p>
+                </div>
+
+                <!-- NEW Factor 3: Average Wind Speed (Low Risk - 30%) -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-base text-gray-800">ความเร็วลมเฉลี่ย</span>
+                        <span class="text-sm font-semibold text-yellow-600">ความเร็วเฉลี่ย 30 กม./ชม. (30%)</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill bg-yellow-400" style="width: 30%;"></div>
+                    </div>
+                    <p class="text-xs text-yellow-600 mt-1">เสี่ยงต่ำ</p>
+                </div>
+
+                <!-- Original Factor 2: Rainfall Data (Low Risk - 25%) -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-base text-gray-800">ปริมาณน้ำฝน</span>
+                        <span class="text-sm font-semibold text-yellow-600">มีฝนตกชุก (25%)</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill bg-yellow-400" style="width: 25%;"></div>
+                    </div>
+                    <p class="text-xs text-yellow-600 mt-1">เสี่ยงต่ำ</p>
+                </div>
+               
+                <!-- NEW Factor 4: Fertilizer History (No Risk - 15%) -->
+                <div> 
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-base text-gray-800">ความอุดมสมบูรณ์ของดิน</span>
+                        <span class="text-sm font-semibold text-green-700">ปุ๋ยอินทรีย์ตามรอบ (15%)</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill bg-green-500" style="width: 15%;"></div>
+                    </div>
+                    <p class="text-xs text-green-700 mt-1">ไม่มีความเสี่ยง</p>
+                </div>
+
+                <!-- Original Factor 3: Weather (No Risk - 10%) -->
+                <div> 
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-base text-gray-800">ระดับน้ำ</span>
+                        <span class="text-sm font-semibold text-green-700">ระดับน้ำเฉลี่ย 10 ซม. (10%)</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill bg-green-500" style="width: 10%;"></div>
+                    </div>
+                    <p class="text-xs text-green-700 mt-1">ไม่มีความเสี่ยง</p>
+                </div>
+
+                <!-- NEW Factor 5: Relative Humidity (No Risk - 5%) -->
+                <div> 
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-base text-gray-800">ความชื้นสัมพัทธ์</span>
+                        <span class="text-sm font-semibold text-green-700">ความชื้น 60% (5%)</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill bg-green-500" style="width: 5%;"></div>
+                    </div>
+                    <p class="text-xs text-green-700 mt-1">ไม่มีความเสี่ยง</p>
+                </div>
+
+
+            </div>
+
+            <!-- Placeholder for additional factors -->
+            <div class="h-10"></div> 
+
+        </div>
+    </div>
+   
+    <!-- Home Indicator (iPhone bar at the bottom) -->
+    <div class="home-indicator"></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const screenNotification = document.getElementById('screen-notification');
+    const screenList = document.getElementById('screen-list');
+    const screenDashboard = document.getElementById('screen-dashboard');
+    const newFeatureCard = document.getElementById('new-feature-card');
+    const notificationCard = document.getElementById('notification-card'); 
+
+    // --- DATE & TIME UPDATE FUNCTION ---
+    function updateDateTime() {
+        const now = new Date('2025-10-05T04:23:00'); // Using fixed date from prompt for consistency
+
+        const thaiDays = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
+        const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+        // Format time (HH:MM)
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const timeString = `${hours}:${minutes}`;
+
+        // Format main date string (e.g., "วันอาทิตย์, 5 ตุลาคม")
+        const dayOfWeek = thaiDays[now.getDay()];
+        const dayOfMonth = now.getDate();
+        const month = thaiMonths[now.getMonth()];
+        const mainDateString = `${dayOfWeek}, ${dayOfMonth} ${month}`;
+
+        // Format dashboard date string (e.g., "(ข้อมูล ณ วันที่ 5 ตุลาคม 2568)")
+        const yearBE = now.getFullYear() + 543;
+        const dashboardDateString = `(ข้อมูล ณ วันที่ ${dayOfMonth} ${month} ${yearBE})`;
+
+        // Get elements and update them
+        const statusBarTimeEl = document.getElementById('status-bar-time');
+        const mainClockTimeEl = document.getElementById('main-clock-time');
+        const mainClockDateEl = document.getElementById('main-clock-date');
+        const dashboardDateEl = document.getElementById('dashboard-date');
+
+        if (statusBarTimeEl) statusBarTimeEl.textContent = timeString;
+        if (mainClockTimeEl) mainClockTimeEl.textContent = timeString;
+        if (mainClockDateEl) mainClockDateEl.textContent = mainDateString;
+        if (dashboardDateEl) dashboardDateEl.textContent = dashboardDateString;
+    }
+
+    // Call the function to set the date/time
+    updateDateTime();
+
+    // --- SCREEN NAVIGATION FUNCTIONS ---
+    // Make functions globally accessible by attaching them to the window object
+    window.showListFromNotification = function() {
+        screenNotification.classList.add('screen-hidden');
+        notificationCard.classList.add('screen-hidden'); 
+        screenList.classList.remove('screen-hidden');
+        screenDashboard.classList.add('screen-hidden');
+    }
+   
+    window.openDashboardFromNotification = function() {
+        screenNotification.classList.add('screen-hidden');
+        notificationCard.classList.add('screen-hidden');
+        screenList.classList.add('screen-hidden');
+        screenDashboard.classList.remove('screen-hidden');
+    }
+
+    window.showDashboard = function() {
+        screenList.classList.add('screen-hidden');
+        screenDashboard.classList.remove('screen-hidden');
+    }
+
+    window.showList = function() {
+        screenDashboard.classList.add('screen-hidden');
+        screenList.classList.remove('screen-hidden');
+    }
+
+    // New function to toggle between the two bell icons
+    window.toggleNotification = function() {
+        const bellOff = document.getElementById('bell-off');
+        const bellOn = document.getElementById('bell-on');
+
+        bellOff.classList.toggle('hidden');
+        bellOn.classList.toggle('hidden');
+    }
+   
+    if (newFeatureCard) {
+        newFeatureCard.addEventListener('click', showDashboard);
+    }
+});
+</script>
+
+</body>
+</html>
+
